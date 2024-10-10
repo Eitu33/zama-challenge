@@ -3,6 +3,7 @@ use http_body_util::Full;
 use hyper::body::Bytes;
 use hyper::Request;
 use hyper_util::rt::TokioIo;
+use mtree::MerkleTree;
 use std::fs;
 use tokio::io::{self, AsyncWriteExt as _};
 use tokio::net::TcpStream;
@@ -28,6 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for path in dir {
         files.push(fs::read(path?.path())?);
     }
+    fs::write("data/root", MerkleTree::new(&files).root().unwrap()).unwrap();
     let bytes = bincode::serialize(&files).unwrap();
 
     let req = Request::post(url)

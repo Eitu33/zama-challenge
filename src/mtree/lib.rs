@@ -3,19 +3,19 @@ extern crate blake2;
 use blake2::{Blake2s256, Digest};
 
 #[derive(Debug, Clone)]
-struct MerkleTree {
+pub struct MerkleTree {
     root: Option<String>,
-    nodes: Vec<String>,
+    _nodes: Vec<String>,
 }
 
 impl MerkleTree {
-    pub fn new(data: Vec<String>) -> MerkleTree {
+    pub fn new(data: &[Vec<u8>]) -> MerkleTree {
         let mut nodes = Vec::new();
         let mut leaves: Vec<String> = data
-            .into_iter()
+            .iter()
             .map(|d| {
                 let mut hasher = Blake2s256::new();
-                hasher.update(d.as_bytes());
+                hasher.update(d);
                 let result = hasher.finalize_reset();
                 format!("{:x}", result)
             })
@@ -45,32 +45,12 @@ impl MerkleTree {
         }
 
         MerkleTree {
-            root: leaves.get(0).cloned(),
-            nodes,
+            root: leaves.first().cloned(),
+            _nodes: nodes,
         }
     }
 
     pub fn root(&self) -> Option<&String> {
         self.root.as_ref()
     }
-}
-
-fn main() {
-    let data = vec![
-        "data1".to_string(),
-        "data2".to_string(),
-        "data3".to_string(),
-        "data4".to_string(),
-        "data5".to_string(),
-        "data6".to_string(),
-        "data7".to_string(),
-        "data8".to_string(),
-        "data9".to_string(),
-    ];
-
-    let tree = MerkleTree::new(data);
-
-    println!("Merkle Tree Root: {:?}", tree.root());
-    println!("Merkle Tree Nodes: {:?}", tree.nodes);
-    println!("Merkle Tree Nodes Len: {:?}", tree.nodes.len());
 }

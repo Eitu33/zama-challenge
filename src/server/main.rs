@@ -14,9 +14,9 @@ use tokio::net::TcpListener;
 async fn echo(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, Infallible>>, hyper::Error> {
-    match req.method() {
-        &Method::GET => Ok(Response::new(Full::new("Call mtree here\n".into()).boxed())),
-        &Method::POST => {
+    match *req.method() {
+        Method::GET => Ok(Response::new(Full::new("Call mtree here\n".into()).boxed())),
+        Method::POST => {
             let data = req.into_body().frame().await.unwrap()?.into_data().unwrap();
             let files: Vec<Vec<u8>> = bincode::deserialize(&data).unwrap();
             for (i, file) in files.iter().rev().enumerate() {

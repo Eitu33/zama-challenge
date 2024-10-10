@@ -11,7 +11,7 @@ path = "src/server/main.rs"
 name = "client"
 path = "src/client/main.rs"
 
-[[bin]]
+[lib]
 name = "mtree"
 path = "src/mtree/lib.rs"
 
