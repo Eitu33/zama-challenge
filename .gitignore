@@ -1,4 +1,4 @@
 /target
-/data/root
+/root
 /data/server/*
 Cargo.lock
