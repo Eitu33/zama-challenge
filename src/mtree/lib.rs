@@ -1,6 +1,5 @@
-extern crate blake2;
-
 use blake2::{Blake2s256, Digest};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct MerkleTree {
@@ -8,7 +7,7 @@ pub struct MerkleTree {
     nodes: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Order {
     Before,
     After,
