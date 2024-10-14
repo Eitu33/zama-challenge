@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct MerkleTree {
-    root: Option<String>,
-    nodes: Vec<String>,
+    root: Option<Vec<u8>>,
+    nodes: Vec<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,18 +17,17 @@ impl MerkleTree {
     pub fn new(data: &[Vec<u8>]) -> MerkleTree {
         let mut nodes = Vec::new();
         let mut hasher = Blake2s256::new();
-        let mut leaves: Vec<String> = data
+        let mut leaves: Vec<Vec<u8>> = data
             .iter()
             .map(|d| {
                 hasher.update(d);
-                let result = hasher.finalize_reset();
-                format!("{:x}", result)
+                hasher.finalize_reset().to_vec()
             })
             .collect();
         let ceil = leaves.len().next_power_of_two();
 
         while leaves.len() < ceil {
-            leaves.push("".to_string());
+            leaves.push(vec![]);
         }
         nodes.extend(leaves.clone());
 
@@ -36,10 +35,9 @@ impl MerkleTree {
             leaves = leaves
                 .chunks(2)
                 .map(|chunk| {
-                    hasher.update(chunk[0].as_bytes());
-                    hasher.update(chunk[1].as_bytes());
-                    let result = hasher.finalize_reset();
-                    format!("{:x}", result)
+                    hasher.update(&chunk[0]);
+                    hasher.update(&chunk[1]);
+                    hasher.finalize_reset().to_vec()
                 })
                 .collect();
             nodes.extend(leaves.clone());
@@ -51,7 +49,7 @@ impl MerkleTree {
         }
     }
 
-    pub fn merkle_proof(&self, mut i: usize) -> Vec<(String, Order)> {
+    pub fn merkle_proof(&self, mut i: usize) -> Vec<(Vec<u8>, Order)> {
         let mut proof = Vec::new();
         let mut level_size = 0;
         let mut level_nodes = (self.nodes.len() + 1) / 2;
@@ -76,24 +74,30 @@ impl MerkleTree {
         proof
     }
 
-    pub fn root_from_proof(node: String, proof: Vec<(String, Order)>) -> String {
+    pub fn root_from_proof(file: &[u8], proof: Vec<(Vec<u8>, Order)>) -> Vec<u8> {
         let mut hasher = Blake2s256::new();
-        proof.iter().fold(node, |acc, (sibling, order)| {
-            match order {
-                Order::Before => {
-                    hasher.update(sibling);
-                    hasher.update(acc);
+        hasher.update(file);
+        let file_node = hasher.finalize_reset();
+
+        proof
+            .iter()
+            .fold(file_node, |acc, (sibling, order)| {
+                match order {
+                    Order::Before => {
+                        hasher.update(sibling);
+                        hasher.update(acc);
+                    }
+                    Order::After => {
+                        hasher.update(acc);
+                        hasher.update(sibling);
+                    }
                 }
-                Order::After => {
-                    hasher.update(acc);
-                    hasher.update(sibling);
-                }
-            }
-            format!("{:x}", hasher.finalize_reset())
-        })
+                hasher.finalize_reset()
+            })
+            .to_vec()
     }
 
-    pub fn root(&self) -> Option<&String> {
+    pub fn root(&self) -> Option<&Vec<u8>> {
         self.root.as_ref()
     }
 }
@@ -103,7 +107,7 @@ fn basics_randomized() {
     use rand::{Rng, RngCore};
 
     let upper = rand::thread_rng().gen_range(1..512);
-    let i = rand::thread_rng().gen_range(1..512);
+    let i = rand::thread_rng().gen_range(0..upper);
     let data: Vec<Vec<u8>> = (0..upper)
         .map(|_| {
             let mut data = [0u8; 8];
@@ -114,8 +118,7 @@ fn basics_randomized() {
 
     let mtree = MerkleTree::new(&data);
     let root = mtree.root().unwrap();
-    let node_i = mtree.nodes[i].clone();
     let proof_i = mtree.merkle_proof(i);
 
-    assert_eq!(*root, MerkleTree::root_from_proof(node_i, proof_i));
+    assert_eq!(*root, MerkleTree::root_from_proof(&data[i], proof_i));
 }
