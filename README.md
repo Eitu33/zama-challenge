@@ -9,7 +9,7 @@ Launch the server:
 cargo run --bin server
 ```
 
-Send files from the client:
+Send files from the client (check post command help for options):
 ```
 cargo run --bin client 127.0.0.1:3000 post data/client
 ```

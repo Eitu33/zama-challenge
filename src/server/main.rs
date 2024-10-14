@@ -21,10 +21,16 @@ async fn serve(
             let i: usize = bincode::deserialize(&data).unwrap();
 
             let mut files = Vec::new();
-            let dir = fs::read_dir("data/server").unwrap();
-            for path in dir {
-                files.push(fs::read(path.unwrap().path()).unwrap());
+            let mut paths: Vec<_> = fs::read_dir("data/server")
+                .unwrap()
+                .map(|r| r.unwrap().path())
+                .collect();
+            paths.sort();
+
+            for path in paths {
+                files.push(fs::read(path).unwrap());
             }
+
             let mtree = MerkleTree::new(&files);
             let proof = mtree.merkle_proof(i);
             let load = bincode::serialize(&(files.get(i), proof)).unwrap();
@@ -35,8 +41,8 @@ async fn serve(
             let data = req.into_body().frame().await.unwrap()?.into_data().unwrap();
             let files: Vec<Vec<u8>> = bincode::deserialize(&data).unwrap();
 
-            for (i, file) in files.iter().rev().enumerate() {
-                fs::write(format!("data/server/{}.txt", i + 1), file).unwrap();
+            for (i, file) in files.iter().enumerate() {
+                fs::write(format!("data/server/{}.txt", i), file).unwrap();
             }
 
             Ok(Response::new(Empty::new().boxed()))
@@ -53,6 +59,7 @@ async fn serve(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = TcpListener::bind(addr).await?;
+    fs::create_dir_all("data/server")?;
 
     loop {
         let (stream, _) = listener.accept().await?;
