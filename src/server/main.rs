@@ -27,17 +27,19 @@ async fn serve(
             }
             let mtree = MerkleTree::new(&files);
             let proof = mtree.merkle_proof(i);
-            let load = bincode::serialize(&proof).unwrap();
+            let load = bincode::serialize(&(files.get(i), proof)).unwrap();
 
             Ok(Response::new(Full::new(load.into()).boxed()))
         }
         Method::POST => {
             let data = req.into_body().frame().await.unwrap()?.into_data().unwrap();
             let files: Vec<Vec<u8>> = bincode::deserialize(&data).unwrap();
+
             for (i, file) in files.iter().rev().enumerate() {
-                fs::write(format!("data/server/{}.txt", i), file).unwrap();
+                fs::write(format!("data/server/{}.txt", i + 1), file).unwrap();
             }
-            Ok(Response::new(Full::new("Saved".into()).boxed()))
+
+            Ok(Response::new(Empty::new().boxed()))
         }
         _ => {
             let mut not_found = Response::new(Empty::new().boxed());
@@ -49,7 +51,7 @@ async fn serve(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = TcpListener::bind(addr).await?;
 
     loop {
